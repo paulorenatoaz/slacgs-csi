@@ -169,6 +169,14 @@ def print_final_report(final_report_df):
 
 def plot_error_curve(n_samples_list, final_report_df):
     plt.figure(figsize=(10, 6))
+
+    # Plot the f-score for class 0
+    plt.plot(n_samples_list, final_report_df["F-Score Class 0"], marker='s', linestyle='--', label='F-Score Class 0')
+
+    # Plot the precision for class 0
+    plt.plot(n_samples_list, final_report_df["Precision Class 0"], marker='x', linestyle='--',
+             label='Precision Class 0')
+
     plt.plot(n_samples_list, final_report_df["Error Rate PCA"], marker='o', linestyle='--', label='PCA')
     plt.plot(n_samples_list, final_report_df["Error Rate No PCA"], marker='x', linestyle='--', label='No PCA')
     plt.title('Error Rate vs. Number of Samples')
@@ -305,5 +313,5 @@ if __name__ == "__main__":
     lab_data_path = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'Lab.csv')
     json_output_path = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'outputs', 'analysis_results.json')
     corrompidas = ['rssi', 'amp2', 'amp8', 'amp22', 'amp29', 'amp48']
-    n_samples_list = [2 ** 8, 2 ** 10, 2 ** 12, 2 ** 13, 2 ** 14, 26269, 2 ** 15]
-    run_analysis(lab_data_path, json_output_path, corrompidas, n_samples_list=n_samples_list)
+    # n_samples_list = [2 ** 8, 2 ** 10, 2 ** 12, 2 ** 13, 2 ** 14, 26269, 2 ** 15]
+    run_analysis(lab_data_path, json_output_path, corrompidas)#, n_samples_list=n_samples_list)
