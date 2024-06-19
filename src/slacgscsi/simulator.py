@@ -452,8 +452,8 @@ def train_and_evaluate(X_train, y_train, X_test, y_test, random_state):
     return report, conf_matrix, training_time, error_rate
 
 
-def run_simulation_train_test(lab_data_path, removed_features, n_samples_list=None, n_features_to_remove=0,
-                              pca_retained_variance=0.95, max_gmm_component=10, test_size=0.2, test_mode=False):
+def run_simulation_train_test_split(lab_data_path, removed_features, n_samples_list=None, n_features_to_remove=0,
+                                    pca_retained_variance=0.95, max_gmm_component=10, test_size=0.2, test_mode=False):
     if n_samples_list is None:
         if test_mode:
             n_samples_list = [2 ** 7, 2**10, 2**13]
@@ -464,24 +464,25 @@ def run_simulation_train_test(lab_data_path, removed_features, n_samples_list=No
 
     # Load and preprocess the data
     X, y, feature_names = load_data(lab_data_path, removed_features)
-    total_samples = len(y)
 
+    # Calculate the hash of the dataset and select features
     dataset_hash = calculate_hash(lab_data_path)
     X, deleted_indices = select_features(X, y, n_features_to_remove, feature_names, dataset_hash)
     n_features = X.shape[1]
 
+    # initialize lists to store the results
     n_reports_list = []
-    classification_reports = []
     error_rate_list = []
 
     # Simulation parameters
     print_simulation_parameters(X, removed_features, n_samples_list, pca_retained_variance, max_gmm_component, test_mode)
 
+    # Run simulations for different sample sizes
     for n_samples in tqdm(n_samples_list, desc="Sample Size Progress"):
         if test_mode:
             rounds_factor = 2 ** 7
         else:
-            rounds_factor = 2 ** 14
+            rounds_factor = 2 ** 13
 
         r = math.floor(rounds_factor / np.sqrt(n_samples)) if n_samples < rounds_factor else 4
         errors = []
@@ -492,7 +493,7 @@ def run_simulation_train_test(lab_data_path, removed_features, n_samples_list=No
         total_classification_report = None
         total_optimal_n_components_class_0 = 0
         total_optimal_n_components_class_1 = 0
-
+        n_features_after_pca = None
         for round_num in tqdm(range(r), desc=f"Simulations for N={n_samples}", leave=False):
 
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=round_num)
@@ -616,7 +617,7 @@ def run_simulation_train_test(lab_data_path, removed_features, n_samples_list=No
     }
     store_simulation_results(simulation_data)
 
-    # Plot the error curve
+
 
 
 
