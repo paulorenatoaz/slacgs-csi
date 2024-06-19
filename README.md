@@ -24,3 +24,15 @@ This directory contains:
 - the real-world CSI data collected from Wi-Fi networks for the analysis. 
 - outputs from the simulator for the synthetic data analysis and from the real-world data analysis.
 - graphs and plots generated from the real-world data analysis and the synthetic data simulations.
+
+## real_data_analysis
+
+this module contains the code for the real-world data analysis using the CSI data collected from Wi-Fi networks. We 
+evaluate the model for different sample sizes and feature sets to serach for the optimal trade-off between the number of
+features and sample sizes.
+
+## simulator
+
+this module contains the code for the simulator that generates synthetic data based on Gaussian mixture models learned 
+from the real-world data. We evaluate the performance of classifiers on the synthetic data to analyze the impact of 
+different feature sets and sample sizes on the detection accuracy.
