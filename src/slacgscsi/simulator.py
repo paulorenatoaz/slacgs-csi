@@ -148,12 +148,14 @@ def print_simulation_parameters(X, removed, n_samples_list, pca_retained_varianc
     print("=" * 50)
 
 
-def print_summarized_report(n_samples, mean_training_time, mean_classification_report, mean_conf_matrix, mean_error_rate, n_features):
+def print_summarized_report(n_samples, n_features, rounds, mean_error_rate, mean_training_time,
+                            mean_classification_report, mean_conf_matrix):
 
     print('\n',"=" * 50)
     print(f"Summarized Report for N={n_samples}:")
-    print(f"Mean Number of Features: {n_features}")
-    print(f"Error Rate: {mean_error_rate:.4f}")
+    print(f"Number of Features: {n_features}")
+    print(f'Rounds: {rounds}')
+    print(f"Mean Error Rate: {mean_error_rate:.4f}")
     print(f"Mean Training Time: {mean_training_time:.2f} seconds")
     print(f"Mean Classification Report:\n {pd.DataFrame(mean_classification_report).transpose()}")
     print(f"Mean Confusion Matrix: {mean_conf_matrix}")
@@ -252,7 +254,7 @@ def plot_metrics(simulation_report, n_features, n_samples_list, id, test_size, p
     plt.plot(n_samples_list, list(simulation_report["mean_fscore_class_1"].values()), marker='s', linestyle='--',
              label='F-Score Class 1', color='green')
 
-    crossvalidation = False if simulation_report["num_folds"][0] is None else True
+    crossvalidation = False if simulation_report["mean_num_folds"][0] is None else True
     simulation_method = 'cross-validation' if crossvalidation else 'train_test_split=' + str(test_size)
     plt.title('Error Rate, Precision, and F-Score vs. Number of Samples for ' + str(n_features) + ' features\n' +
               'pca = ' + str(pca_retained_variance) + '; max_gmm_comp = ' + str(max_gmm_component) +
@@ -488,6 +490,8 @@ def run_simulation_train_test(lab_data_path, removed_features, n_samples_list=No
         total_training_time = 0
         total_conf_matrix = np.zeros((2, 2), dtype=int)
         total_classification_report = None
+        total_optimal_n_components_class_0 = 0
+        total_optimal_n_components_class_1 = 0
 
         for round_num in tqdm(range(r), desc=f"Simulations for N={n_samples}", leave=False):
 
@@ -529,6 +533,9 @@ def run_simulation_train_test(lab_data_path, removed_features, n_samples_list=No
             errors.append(error_rate)
             total_training_time += training_time
             total_conf_matrix += conf_matrix
+            total_optimal_n_components_class_0 += optimal_n_components_class_0
+            total_optimal_n_components_class_1 += optimal_n_components_class_1
+
             if total_classification_report is None:
                 total_classification_report = report
             else:
@@ -549,6 +556,8 @@ def run_simulation_train_test(lab_data_path, removed_features, n_samples_list=No
         mean_classification_report = {label: {metric: value / r for metric, value in metrics.items()}
                                       for label, metrics in total_classification_report.items() if
                                       isinstance(metrics, dict)}
+        mean_optimal_n_components_class_0 = total_optimal_n_components_class_0/r
+        mean_optimal_n_components_class_1 = total_optimal_n_components_class_1/r
 
         # Convert NumPy arrays to lists
         mean_conf_matrix = mean_conf_matrix.tolist()
@@ -558,8 +567,8 @@ def run_simulation_train_test(lab_data_path, removed_features, n_samples_list=No
                     mean_classification_report[label][metric] = float(mean_classification_report[label][metric])
 
         # Print summarized report for the current sample size
-        print_summarized_report(n_samples, mean_training_time, mean_classification_report, mean_conf_matrix,
-                                mean_error_rate, n_features_after_pca)
+        print_summarized_report(n_samples, n_features, r, mean_error_rate, mean_training_time,
+                                mean_classification_report, mean_conf_matrix)
 
         # Extract precision and f-score for class 0
         precision_class_0 = mean_classification_report["0"]["precision"]
@@ -570,14 +579,17 @@ def run_simulation_train_test(lab_data_path, removed_features, n_samples_list=No
         # Store the results
         n_report_summary = {
             "sample_size": n_samples,
+            "rounds": r,
             "mean_error_rate": mean_error_rate,
             "mean_training_time": mean_training_time,
             "mean_precision_class_0": precision_class_0,
             "mean_fscore_class_0": fscore_class_0,
             "mean_precision_class_1": precision_class_1,
             "mean_fscore_class_1": fscore_class_1,
+            "mean_optimal_n_components_class_0": mean_optimal_n_components_class_0,
+            "mean_optimal_n_components_class_1": mean_optimal_n_components_class_1,
             "mean_confusion_matrix": mean_conf_matrix,
-            "num_folds": None,
+            "mean_num_folds": None,
             "num_features_after_pca": n_features_after_pca,
             "mean_classification_report": mean_classification_report
         }
@@ -593,16 +605,14 @@ def run_simulation_train_test(lab_data_path, removed_features, n_samples_list=No
         "n_features": n_features,
         "begin_time": simulation_begin,
         "end_time": datetime.now().isoformat(),
-        "duration": (datetime.now() - datetime.fromisoformat(simulation_begin)).total_seconds(),
+        "duration(h)": (datetime.now() - datetime.fromisoformat(simulation_begin)).total_seconds()/3600,
         "pca_retained_variance": pca_retained_variance,
         "test_size": test_size,
         "max_gmm_component": max_gmm_component,
         "n_samples_list": n_samples_list,
         "error_rate_list": error_rate_list,
-        "simulation_report": simulation_report.to_dict(),
         "deleted_features": deleted_indices,
-        "n_reports_list": n_reports_list,
-
+        "simulation_report": simulation_report.to_dict(),
     }
     store_simulation_results(simulation_data)
 
@@ -709,8 +719,8 @@ def run_simulation_crossval(lab_data_path, corrompidas, output_file, n_features_
                     mean_classification_report[label][metric] = float(mean_classification_report[label][metric])
 
         # Print summarized report for the current sample size
-        print_summarized_report(n_samples, mean_training_time, mean_classification_report, mean_conf_matrix,
-                                mean_error_rate, n_features_after_pca)
+        print_summarized_report(n_samples, n_features_after_pca, r,
+                                mean_training_time, mean_classification_report, mean_conf_matrix, mean_error_rate)
 
         # Extract precision and f-score for class 0
         precision_class_0 = mean_classification_report["0"]["precision"]

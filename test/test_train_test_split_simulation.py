@@ -12,7 +12,7 @@ print("Current sys.path:", sys.path)
 from slacgscsi import PROJECT_DIR, run_simulation_train_test
 
 if __name__ == "__main__":
-    lab_data_path = os.path.join(PROJECT_DIR, 'Lab.csv')
+    lab_data_path = os.path.join(PROJECT_DIR, 'data', 'Lab.csv')
     removed_features = ['rssi', 'amp3', 'amp4', 'amp5', 'amp6', 'amp7', 'amp9', 'amp10',
                   'amp11', 'amp12', 'amp13', 'amp14', 'amp15', 'amp16', 'amp17', 'amp18',
                   'amp19', 'amp20', 'amp21', 'amp23', 'amp24', 'amp25', 'amp26', 'amp27',
