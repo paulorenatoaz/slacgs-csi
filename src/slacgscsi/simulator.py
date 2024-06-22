@@ -135,7 +135,7 @@ def print_feature_statistics(mean_empirical_0, cov_empirical_0, mean_empirical_1
     print("\nMean of class 1:\n", mean_empirical_1)
     print("\nCovariance of class 1:\n", cov_empirical_1)
 
-def print_simulation_parameters(X, removed, n_samples_list, pca_retained_variance, max_gmm_component, test_mode):
+def print_simulation_parameters(X, removed, n_samples_list, pca_retained_variance, max_gmm_components, test_mode):
     print("=" * 50)
     print("\nSimulation Parameters:")
     print(f"Number of Features: {X.shape[1]}")
@@ -143,7 +143,7 @@ def print_simulation_parameters(X, removed, n_samples_list, pca_retained_varianc
     print(f"Removed features: {removed}")
     print(f"Sample sizes to test: {n_samples_list}")
     print(f"PCA Retained Variance: {pca_retained_variance}")
-    print(f"Max GMM Components: {max_gmm_component}")
+    print(f"Max GMM Components: {max_gmm_components}")
     print(f"Test Mode: {test_mode}\n")
     print("=" * 50)
 
@@ -234,7 +234,7 @@ def plot_two_classes_from_dfs(X_df_class_0, X_df_class_1, class0_label='Class 0'
     plt.show()
 
 
-def plot_metrics(simulation_report, n_features, n_samples_list, id, test_size, pca_retained_variance, max_gmm_component):
+def plot_metrics(simulation_report, n_features, n_samples_list, id, test_size, pca_retained_variance, max_gmm_components):
     plt.figure(figsize=(10, 6))
 
     # Plot the error rate
@@ -257,7 +257,7 @@ def plot_metrics(simulation_report, n_features, n_samples_list, id, test_size, p
     crossvalidation = False if simulation_report["mean_num_folds"][0] is None else True
     simulation_method = 'cross-validation' if crossvalidation else 'train_test_split=' + str(test_size)
     plt.title('Error Rate, Precision, and F-Score vs. Number of Samples for ' + str(n_features) + ' features\n' +
-              'pca = ' + str(pca_retained_variance) + '; max_gmm_comp = ' + str(max_gmm_component) +
+              'pca = ' + str(pca_retained_variance) + '; max_gmm_comp = ' + str(max_gmm_components) +
               '; method: ' + simulation_method)
     plt.xlabel('Number of Samples (log scale)')
     plt.ylabel('Metrics')
@@ -304,7 +304,7 @@ def store_simulation_results(simulation_data):
 
     plot_image_path = plot_metrics(simulation_data['simulation_report'], simulation_data['n_features'],
                                    simulation_data['n_samples_list'], current_id, simulation_data['test_size'],
-                                   simulation_data['pca_retained_variance'], simulation_data['max_gmm_component'])
+                                   simulation_data['pca_retained_variance'], simulation_data['max_gmm_components'])
 
     simulation_data['plot_image_path'] = plot_image_path
 
@@ -453,7 +453,7 @@ def train_and_evaluate(X_train, y_train, X_test, y_test, random_state):
 
 
 def run_simulation_train_test_split(lab_data_path, removed_features, n_samples_list=None, n_features_to_remove=0,
-                                    pca_retained_variance=0.95, max_gmm_component=10, test_size=0.2, test_mode=False):
+                                    pca_retained_variance=0.95, max_gmm_components=10, test_size=0.2, test_mode=False):
     if n_samples_list is None:
         if test_mode:
             n_samples_list = [2 ** 7, 2**10, 2**13]
@@ -475,7 +475,7 @@ def run_simulation_train_test_split(lab_data_path, removed_features, n_samples_l
     error_rate_list = []
 
     # Simulation parameters
-    print_simulation_parameters(X, removed_features, n_samples_list, pca_retained_variance, max_gmm_component, test_mode)
+    print_simulation_parameters(X, removed_features, n_samples_list, pca_retained_variance, max_gmm_components, test_mode)
 
     # Run simulations for different sample sizes
     for n_samples in tqdm(n_samples_list, desc="Sample Size Progress"):
@@ -509,8 +509,8 @@ def run_simulation_train_test_split(lab_data_path, removed_features, n_samples_l
             X_test = scaler.transform(X_test)
 
             # Estimate optimal number of components for each class
-            optimal_n_components_class_0 = estimate_n_components(X_class_0, max_gmm_component, round_num)
-            optimal_n_components_class_1 = estimate_n_components(X_class_1, max_gmm_component, round_num)
+            optimal_n_components_class_0 = estimate_n_components(X_class_0, max_gmm_components, round_num)
+            optimal_n_components_class_1 = estimate_n_components(X_class_1, max_gmm_components, round_num)
 
 
             # Generate synthetic data
@@ -609,7 +609,7 @@ def run_simulation_train_test_split(lab_data_path, removed_features, n_samples_l
         "duration(h)": (datetime.now() - datetime.fromisoformat(simulation_begin)).total_seconds()/3600,
         "pca_retained_variance": pca_retained_variance,
         "test_size": test_size,
-        "max_gmm_component": max_gmm_component,
+        "max_gmm_components": max_gmm_components,
         "n_samples_list": n_samples_list,
         "error_rate_list": error_rate_list,
         "deleted_features": deleted_indices,

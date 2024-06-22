@@ -87,6 +87,7 @@ def select_features(X, y, n_features_to_remove, feature_names, dataset_hash):
     print("\nFeature selection completed.")
     return X_selected, deleted_indices
 
+
 def rank_features(X, y, feature_names, ranking_file_path, ranking_data, dataset_hash):
     print("\nStarting feature selection...")
     start_time = time.time()
@@ -147,7 +148,7 @@ def print_analysis_report(analysis_report):
     return analysis_report_df
 
 
-def plot_metrics(analysis_report, n_features, n_samples_list, id, test_size, pca_retained_variance, max_gmm_component):
+def plot_metrics(analysis_report, n_features, n_samples_list, id, test_size, pca_retained_variance, max_gmm_components):
     plt.figure(figsize=(10, 6))
 
     # Plot the error rate
@@ -167,10 +168,10 @@ def plot_metrics(analysis_report, n_features, n_samples_list, id, test_size, pca
     plt.plot(n_samples_list, list(analysis_report["mean_fscore_class_1"].values()), marker='s', linestyle='--',
              label='F-Score Class 1', color='green')
 
-    crossvalidation = False if analysis_report["mean_num_folds"][0] is None else True
+    crossvalidation = False if analysis_report["num_folds"][0] is None else True
     analysis_method = 'cross-validation' if crossvalidation else 'train_test_split=' + str(test_size)
     plt.title('Error Rate, Precision, and F-Score vs. Number of Samples for ' + str(n_features) + ' features\n' +
-              'pca = ' + str(pca_retained_variance) + '; max_gmm_comp = ' + str(max_gmm_component) +
+              'pca = ' + str(pca_retained_variance) + '; max_gmm_comp = ' + str(max_gmm_components) +
               '; method: ' + analysis_method)
     plt.xlabel('Number of Samples (log scale)')
     plt.ylabel('Metrics')
@@ -217,7 +218,7 @@ def store_analysis_results(analysis_data):
 
     plot_image_path = plot_metrics(analysis_data['analysis_report'], analysis_data['n_features'],
                                    analysis_data['n_samples_list'], current_id, analysis_data['test_size'],
-                                   analysis_data['pca_retained_variance'], analysis_data['max_gmm_component'])
+                                   analysis_data['pca_retained_variance'], analysis_data['max_gmm_components'])
 
     analysis_data['plot_image_path'] = plot_image_path
 
@@ -235,7 +236,7 @@ def store_analysis_results(analysis_data):
         json.dump(existing_data, file, indent=4)
 
 
-def train_and_evaluate_train_test(X_train, X_test, y_train, y_test, use_pca=True):
+def train_and_evaluate_train_test(X_train, X_test, y_train, y_test):
 
 
     # Standardize data
@@ -243,13 +244,7 @@ def train_and_evaluate_train_test(X_train, X_test, y_train, y_test, use_pca=True
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
-    n_features_pca = False
-    # Apply PCA to retain the specified variance
-    if use_pca:
-        pca = PCA(n_components=0.95)
-        X_train = pca.fit_transform(X_train)
-        X_test = pca.transform(X_test)
-        n_features_pca = X_train.shape[1]
+
 
     # Calculate class weights
     class_weights = compute_class_weight(class_weight='balanced', classes=[0, 1], y=y_train)
@@ -272,7 +267,7 @@ def train_and_evaluate_train_test(X_train, X_test, y_train, y_test, use_pca=True
     error_rate = 1 - accuracy_score(y_test, predictions)
     training_time = end_time - start_time
 
-    return report, conf_matrix, training_time, error_rate, n_features_pca
+    return report, conf_matrix, training_time, error_rate
 
 
 def train_and_evaluate_crossval(X, y, n_splits):
@@ -298,7 +293,7 @@ def train_and_evaluate_crossval(X, y, n_splits):
     error_rate = 1 - accuracy_score(y, predictions)
     training_time = end_time - start_time
 
-    return report, conf_matrix, training_time, predictions, error_rate
+    return report, conf_matrix, training_time, error_rate
 
 
 
@@ -358,13 +353,14 @@ def create_balanced_subset(X_class_0, X_class_1, subset_size, optimal_n_componen
     samples_class1 = int(np.round(subset_size * proportion_class1))
     samples_class2 = subset_size - samples_class1
 
+
     # Calculate the number of samples to draw from each component for class 1
     for component in range(optimal_n_components_class_0):
         component_indices = np.where(component_labels_0 == component)[0]
         n_samples_component = len(component_indices)
         n_samples_to_draw = int(np.round(samples_class1 * n_samples_component / len(X_class_0)))
         n_samples_to_draw = min(n_samples_to_draw, len(X_class_0))
-        sampled_indices = np.random.choice(component_indices, n_samples_to_draw, replace=False)
+        sampled_indices = np.random.choice(component_indices, n_samples_to_draw)
         X_subset.extend(X_class_0[sampled_indices])
         y_subset.extend([0] * n_samples_to_draw)  # Label for class 1
 
@@ -372,9 +368,9 @@ def create_balanced_subset(X_class_0, X_class_1, subset_size, optimal_n_componen
     for component in range(optimal_n_components_class_1):
         component_indices = np.where(component_labels_1 == component)[0]
         n_samples_component = len(component_indices)
-        n_samples_to_draw = min(n_samples_to_draw, len(X_class_1))
         n_samples_to_draw = int(np.round(samples_class2 * n_samples_component / len(X_class_1)))
-        sampled_indices = np.random.choice(component_indices, n_samples_to_draw, replace=False)
+        n_samples_to_draw = min(n_samples_to_draw, len(X_class_1))
+        sampled_indices = np.random.choice(component_indices, n_samples_to_draw)
         X_subset.extend(X_class_1[sampled_indices])
         y_subset.extend([1] * n_samples_to_draw)  # Label for class 2
 
@@ -385,7 +381,7 @@ def create_balanced_subset(X_class_0, X_class_1, subset_size, optimal_n_componen
 
 
 def run_real_data_analysis_train_test_split(lab_data_path, removed_features, n_samples_list=None, n_features_to_remove=0,
-                                    pca_retained_variance=0.95, max_gmm_component=10, test_size=0.2, test_mode=False):
+                                    pca_retained_variance=0.95, max_gmm_components=10, test_size=0.2, test_mode=False):
     if n_samples_list is None:
         if test_mode:
             n_samples_list = [2 ** 7, 2 ** 10, 2 ** 13]
@@ -435,12 +431,13 @@ def run_real_data_analysis_train_test_split(lab_data_path, removed_features, n_s
             X_class_1 = X_train[y_train == 1]
 
             # Estimate optimal number of components for each class
-            optimal_n_components_class_0 = estimate_n_components(X_class_0, max_gmm_component, round_num)
-            optimal_n_components_class_1 = estimate_n_components(X_class_1, max_gmm_component, round_num)
+            optimal_n_components_class_0 = estimate_n_components(X_class_0, max_gmm_components, round_num)
+            optimal_n_components_class_1 = estimate_n_components(X_class_1, max_gmm_components, round_num)
 
+            np.random.seed(round_num)
             X_train, y_train = create_balanced_subset(X_class_0, X_class_1, n_samples,
-                                                                            optimal_n_components_class_0,
-                                                                            optimal_n_components_class_1)
+                                                      optimal_n_components_class_0,
+                                                      optimal_n_components_class_1)
 
 
             if pca_retained_variance:
@@ -449,12 +446,9 @@ def run_real_data_analysis_train_test_split(lab_data_path, removed_features, n_s
                 X_test = pca.transform(X_test.to_numpy())
                 n_features_after_pca = X_train.shape[1]
 
-
             # Train and evaluate the model
-            report, conf_matrix, training_time, error_rate, n_features_pca = train_and_evaluate_train_test(X_train,
-                                                                                                           X_test,
-                                                                                                           y_train,
-                                                                                                           y_test.to_numpy())
+            report, conf_matrix, training_time, error_rate = train_and_evaluate_train_test(X_train, X_test,
+                                                                                           y_train, y_test.to_numpy())
 
             # Accumulate metrics
             errors.append(error_rate)
@@ -516,7 +510,7 @@ def run_real_data_analysis_train_test_split(lab_data_path, removed_features, n_s
             "mean_optimal_n_components_class_0": mean_optimal_n_components_class_0,
             "mean_optimal_n_components_class_1": mean_optimal_n_components_class_1,
             "mean_confusion_matrix": mean_conf_matrix,
-            "mean_num_folds": None,
+            "num_folds": None,
             "num_features_after_pca": n_features_after_pca,
             "mean_classification_report": mean_classification_report
         }
@@ -534,7 +528,7 @@ def run_real_data_analysis_train_test_split(lab_data_path, removed_features, n_s
         "duration(h)": (datetime.now() - datetime.fromisoformat(analysis_begin)).total_seconds() / 3600,
         "pca_retained_variance": pca_retained_variance,
         "test_size": test_size,
-        "max_gmm_component": max_gmm_component,
+        "max_gmm_components": max_gmm_components,
         "n_samples_list": n_samples_list,
         "error_rate_list": error_rate_list,
         "deleted_features": deleted_indices,
@@ -543,7 +537,7 @@ def run_real_data_analysis_train_test_split(lab_data_path, removed_features, n_s
     store_analysis_results(analysis_data)
 
 
-def estimate_n_components(data, max_components, random_state):
+def estimate_n_components(data, max_components, random_state=13):
     """
     Estimate the optimal number of components for GMM using BIC.
 
@@ -562,6 +556,7 @@ def estimate_n_components(data, max_components, random_state):
     n_components_range = range(1, max_components + 1)
 
     for n_components in n_components_range:
+
         gmm = GaussianMixture(n_components=n_components, random_state=random_state)
         gmm.fit(data)
         bics.append(gmm.bic(data))
@@ -573,90 +568,98 @@ def estimate_n_components(data, max_components, random_state):
     return optimal_components_bic#, optimal_components_aic
 
 
-def run_analysis_crossval(lab_data_path, json_output_path, corrompidas, n_features_to_remove, n_samples_list=None):
-    n_samples_list = [2 ** 10, 2 ** 11, 2 ** 12] if n_samples_list is None else n_samples_list
+def run_real_data_analysis_crossval(lab_data_path, removed_features, n_samples_list=None, n_features_to_remove=0,
+                                    pca_retained_variance=0.95, max_gmm_components=10, test_size=None, test_mode=False):
+    if n_samples_list is None:
+        if test_mode:
+            n_samples_list = [2 ** 7, 2 ** 10, 2 ** 13]
+        else:
+            n_samples_list = [2 ** 7, 2 ** 8, 2 ** 9, 2 ** 10, 2 ** 11, 2 ** 12, 2 ** 13, 2 ** 14, 2 ** 15]
 
-    X, y, feature_names = load_data(lab_data_path, corrompidas)
-    print_dataset_report(X, corrompidas, y, feature_names)
+    analysis_begin = datetime.now().isoformat()
 
+    X, y, feature_names = load_data(lab_data_path, removed_features)
+    print_dataset_report(X, removed_features, y, feature_names)
+
+    # Calculate the hash of the dataset and select features
     dataset_hash = calculate_hash(lab_data_path)
-    X, deleted_indices = select_features(X, y, n_features_to_remove , feature_names, dataset_hash)
-
-    # store the original number of features before PCA
-    n_features_no_pca = X.shape[1]
-    scaler = StandardScaler()
-    X = scaler.fit_transform(X)
-
-    # # Apply PCA to retain the specified variance
-    # pca = PCA(n_components=0.95)
-    # X = pca.fit_transform(X)
-    # n_features = X.shape[1]
-
-    final_reports = []
-    classification_reports = []
-
-    class_counts = y.value_counts()
-    total_samples = len(y)
+    X, deleted_indices = select_features(X, y, n_features_to_remove, feature_names, dataset_hash)
 
     # Separate the training data based on class
     X_class_0 = X[y == 0]
     X_class_1 = X[y == 1]
 
-    optimal_components_class0_bic, optimal_components_class0_aic = estimate_n_components(X_class_0, max_components=10)
-    optimal_components_class1_bic, optimal_components_class1_aic = estimate_n_components(X_class_1, max_components=10)
+    # store the original number of features before PCA
+    n_features = X.shape[1]
 
-    optimal_components_class0 = optimal_components_class0_bic
-    optimal_components_class1 = optimal_components_class1_bic
+    # Estimate optimal number of components for each class
+    optimal_n_components_class_0 = estimate_n_components(X_class_0, max_gmm_components)
+    optimal_n_components_class_1 = estimate_n_components(X_class_1, max_gmm_components)
 
-    component_labels0, component_labels1 = get_gmm_components_labels(X_class_0, X_class_1, optimal_components_class0, optimal_components_class1)
+    # initialize lists to store the results
+    n_reports_list = []
+    error_rate_list = []
 
-
-
+    total_samples = len(y)
     for n_samples in tqdm(n_samples_list, desc="Sample Size Progress"):
+
+        if test_mode:
+            rounds_factor = 2 ** 7
+        else:
+            rounds_factor = 2 ** 12
+
+        # set number of round
+        r = math.floor(rounds_factor / np.sqrt(n_samples)) if n_samples < rounds_factor else 4
 
         max_n_splits = 10
         min_n_splits = 2
-        n_splits = math.floor((max_n_splits/(0.9*total_samples)) * n_samples) if max_n_splits/total_samples * n_samples > min_n_splits else min_n_splits
-        n_samples_subset = int(n_splits / (n_splits - 1)) * n_samples
-
-
-        r = math.floor(2 ** 10 / np.sqrt(n_samples)) if n_samples < 2 ** 10 else 4
-        errors = []
+        n_folds = math.floor((max_n_splits/(0.9*total_samples)) * n_samples) if max_n_splits/total_samples * n_samples > min_n_splits else min_n_splits
+        n_samples_subset = int(n_folds / (n_folds - 1)) * n_samples
 
         # Initialize accumulators for metrics
+        errors = []
         total_training_time = 0
         total_conf_matrix = np.zeros((2, 2), dtype=int)
         total_classification_report = None
+        total_optimal_n_components_class_0 = 0
+        total_optimal_n_components_class_1 = 0
+        n_features_after_pca = None
 
         for round_num in tqdm(range(r), desc=f"Analysis for N={n_samples}", leave=False):
 
-            # get random values from set for both classes
             np.random.seed(round_num)
+            X_train, y_train = create_balanced_subset(X_class_0, X_class_1, n_samples_subset,
+                                                      optimal_n_components_class_0,
+                                                      optimal_n_components_class_1)
 
-            X_selected_samples, y_selected_samples = create_balanced_subset(X_class_0, X_class_1, n_samples_subset, optimal_components_class0,
-                                   optimal_components_class1, component_labels0, component_labels1)
+            if pca_retained_variance:
+                pca = PCA(n_components=pca_retained_variance)
+                X_train = pca.fit_transform(X_train)
+                n_features_after_pca = X_train.shape[1]
 
-            # Train and evaluate the model
-            report, conf_matrix, training_time, predictions, error_rate = train_and_evaluate_crossval(
-                X_selected_samples, y_selected_samples, n_splits)
+                # Train and evaluate the model
+                report, conf_matrix, training_time, error_rate = train_and_evaluate_crossval(X_train, y_train, n_folds)
 
-            # Accumulate metrics
-            errors.append(error_rate)
-            total_training_time += training_time
-            total_conf_matrix += conf_matrix
-            if total_classification_report is None:
-                total_classification_report = report
-            else:
-                for label, metrics in report.items():
-                    if isinstance(metrics, dict):  # Ensure metrics is a dictionary
-                        if label not in total_classification_report:
-                            total_classification_report[label] = metrics
-                        else:
-                            for metric, value in metrics.items():
-                                total_classification_report[label][metric] += value
+                # Accumulate metrics
+                errors.append(error_rate)
+                total_training_time += training_time
+                total_conf_matrix += conf_matrix
+                total_optimal_n_components_class_0 += optimal_n_components_class_0
+                total_optimal_n_components_class_1 += optimal_n_components_class_1
+
+                if total_classification_report is None:
+                    total_classification_report = report
+                else:
+                    for label, metrics in report.items():
+                        if isinstance(metrics, dict):  # Ensure metrics is a dictionary
+                            if label not in total_classification_report:
+                                total_classification_report[label] = metrics
+                            else:
+                                for metric, value in metrics.items():
+                                    total_classification_report[label][metric] += value
 
         # Average error rate for the current sample size
-        average_error_rate = np.mean(errors)
+        mean_error_rate = np.mean(errors)
 
         # Calculate mean values for the metrics
         mean_training_time = total_training_time / r
@@ -664,6 +667,8 @@ def run_analysis_crossval(lab_data_path, json_output_path, corrompidas, n_featur
         mean_classification_report = {label: {metric: value / r for metric, value in metrics.items()}
                                       for label, metrics in total_classification_report.items() if
                                       isinstance(metrics, dict)}
+        mean_optimal_n_components_class_0 = total_optimal_n_components_class_0 / r
+        mean_optimal_n_components_class_1 = total_optimal_n_components_class_1 / r
 
         # Convert NumPy arrays to lists
         mean_conf_matrix = mean_conf_matrix.tolist()
@@ -672,54 +677,54 @@ def run_analysis_crossval(lab_data_path, json_output_path, corrompidas, n_featur
                 for metric in metrics:
                     mean_classification_report[label][metric] = float(mean_classification_report[label][metric])
 
+        # Print summarized report for the current sample size
+        print_summarized_report(n_samples, n_features, r, mean_error_rate, mean_training_time,
+                                mean_classification_report, mean_conf_matrix)
 
         # Extract precision and f-score for class 0
         precision_class_0 = mean_classification_report["0"]["precision"]
         fscore_class_0 = mean_classification_report["0"]["f1-score"]
+        precision_class_1 = mean_classification_report["1"]["precision"]
+        fscore_class_1 = mean_classification_report["1"]["f1-score"]
 
         # Store the results
-        report_summary = {
-            "Sample Size": n_samples,
-            "Number of Features before PCA": n_features_no_pca,
-            # "Number of Features after PCA": n_features,
-            "Mean Error Rate": average_error_rate,
-            "Mean Training Time (s)": mean_training_time,
-            "Mean Precision Class 0": precision_class_0,
-            "Mean F-Score Class 0": fscore_class_0,
-            "Mean Confusion Matrix": mean_conf_matrix,
-            "n_splits": n_splits
+        n_report_summary = {
+            "sample_size": n_samples,
+            "rounds": r,
+            "mean_error_rate": mean_error_rate,
+            "mean_training_time": mean_training_time,
+            "mean_precision_class_0": precision_class_0,
+            "mean_fscore_class_0": fscore_class_0,
+            "mean_precision_class_1": precision_class_1,
+            "mean_fscore_class_1": fscore_class_1,
+            "mean_optimal_n_components_class_0": mean_optimal_n_components_class_0,
+            "mean_optimal_n_components_class_1": mean_optimal_n_components_class_1,
+            "mean_confusion_matrix": mean_conf_matrix,
+            "num_folds": n_folds,
+            "num_features_after_pca": n_features_after_pca,
+            "mean_classification_report": mean_classification_report
         }
-        final_reports.append(report_summary)
+        error_rate_list.append(mean_error_rate)
+        n_reports_list.append(n_report_summary)
 
-        # Collect classification reports for JSON storage
-        classification_report_filtered = {label: metrics for label, metrics in report.items() if
-                                          isinstance(metrics, dict)}
-        classification_reports.append({**classification_report_filtered, "Sample Size": n_samples})
+    # Print and save the final comparison report
+    analysis_report = print_analysis_report(n_reports_list)
 
-        # Print summarized report for the current sample size
-        print_summarized_report(n_samples, training_time, report, conf_matrix, error_rate, n_features_no_pca)
-
-    # Final comparison report
-    final_report_df = pd.DataFrame(final_reports)
-    print_final_report(final_report_df)
-
-
-
-    # Save analysis results to a JSON file
+    # Save the analysis results to a JSON file
     analysis_data = {
+        "n_features": n_features,
+        "begin_time": analysis_begin,
+        "end_time": datetime.now().isoformat(),
+        "duration(h)": (datetime.now() - datetime.fromisoformat(analysis_begin)).total_seconds() / 3600,
+        "pca_retained_variance": pca_retained_variance,
+        "test_size": test_size,
+        "max_gmm_components": max_gmm_components,
         "n_samples_list": n_samples_list,
+        "error_rate_list": error_rate_list,
         "deleted_features": deleted_indices,
-        "n_features_before_pca": n_features_no_pca,
-        # "n_features_after_pca": n_features,
-        "final_report_df": final_reports,
-        "pca_variance": 0.95,
-        "classification_reports": classification_reports
+        "analysis_report": analysis_report.to_dict(),
     }
-    store_analysis_results(json_output_path, analysis_data)
-
-    # Plot the error curve
-    plot_error_curve(n_samples_list, final_report_df, n_features_no_pca)
-
+    store_analysis_results(analysis_data)
 if __name__ == "__main__":
     lab_data_path = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'Lab.csv')
     json_output_path = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'outputs', 'analysis_results.json')

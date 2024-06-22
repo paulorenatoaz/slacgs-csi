@@ -1,5 +1,11 @@
 import os
-from slacgscsi import run_real_data_analysis_train_test_split
+import sys
+
+# Add the 'src' directory to the sys.path
+src_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src'))
+print("Source directory added to sys.path:", src_path)
+sys.path.append(src_path)
+from slacgscsi import run_real_data_analysis_crossval
 
 if __name__ == "__main__":
 
@@ -13,4 +19,4 @@ if __name__ == "__main__":
                   'amp45', 'amp46', 'amp47', 'amp49', 'amp50', 'amp51', 'amp52']
 
     for n_features_to_remove in range(4, -1, -1):
-        run_real_data_analysis_train_test_split(lab_data_path, removed_features, n_features_to_remove=n_features_to_remove)
+        run_real_data_analysis_crossval(lab_data_path, removed_features, n_features_to_remove=n_features_to_remove)

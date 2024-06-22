@@ -1,4 +1,10 @@
 import os
+import sys
+
+# Add the 'src' directory to the sys.path
+src_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src'))
+print("Source directory added to sys.path:", src_path)
+sys.path.append(src_path)
 from slacgscsi import run_real_data_analysis_train_test_split
 
 if __name__ == "__main__":
@@ -12,5 +18,5 @@ if __name__ == "__main__":
                   'amp37', 'amp38', 'amp39', 'amp40', 'amp41', 'amp42', 'amp43', 'amp44',
                   'amp45', 'amp46', 'amp47', 'amp49', 'amp50', 'amp51', 'amp52']
 
-    for n_features_to_remove in range(4, -1, -1):
+    for n_features_to_remove in range(1, -1, -1):
         run_real_data_analysis_train_test_split(lab_data_path, removed_features, n_features_to_remove=n_features_to_remove)
