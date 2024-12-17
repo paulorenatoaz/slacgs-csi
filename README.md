@@ -10,14 +10,9 @@ This study introduces a novel approach to Wi-Fi network security by leveraging s
 We utilize machine learning techniques to analyze the trade-off between the number of features and sample sizes, aiming to optimize detection accuracy.  
 
 Our methodology includes:  
-- Generating synthetic datasets that mimic real-world Wi-Fi environments  
-  with the help of Gaussian Mixture Models learned from CSI data,  
-  and performing simulations to evaluate the performance of classifiers  
-  on the synthetic data.  
+- Generating synthetic datasets that mimic real-world Wi-Fi environments with the help of Gaussian Mixture Models learned from CSI data, and performing simulations to evaluate the performance of classifiers on the synthetic data.  
 
-- Analyzing real-world CSI data collected from Wi-Fi networks  
-  to evaluate the performance of classifiers across different scenarios  
-  varying in feature sets and sample sizes.  
+- Analyzing real-world CSI data collected from Wi-Fi networks to evaluate the performance of classifiers across different scenarios varying in feature sets and sample sizes.  
 
 Our results demonstrate that synthetic data can effectively complement real-world data in enhancing Wi-Fi security, providing valuable insights into the optimal balance of features and samples for intrusion detection.  
 Additionally, the analysis of the real-world data shows that the model can achieve high detection accuracy with a small number of features and samples.
@@ -27,10 +22,8 @@ Additionally, the analysis of the real-world data shows that the model can achie
 This directory contains:
 
 - The real-world CSI data collected from Wi-Fi networks for the analysis.  
-- Outputs from the simulator for the synthetic data analysis  
-  and from the real-world data analysis.  
-- Graphs and plots generated from the real-world data analysis  
-  and the synthetic data simulations.  
+- Outputs from the simulator for the synthetic data analysis and from the real-world data analysis.  
+- Graphs and plots generated from the real-world data analysis and the synthetic data simulations.  
 
 ## real_data_analysis  
 
